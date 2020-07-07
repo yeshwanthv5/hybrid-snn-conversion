@@ -2,3 +2,5 @@ logs
 trained_models
 __pycache__
 script.sh
+*swp
+pretrained_models
