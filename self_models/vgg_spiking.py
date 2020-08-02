@@ -243,11 +243,13 @@ class VGG_SNN_STDB(nn.Module):
 			for value in values:
 				value.fill_(-1000)
 
-	def forward(self, x, find_max_mem=False, max_mem_layer=0):
+	def forward(self, x, find_max_mem=False, max_mem_layer=0, find_activity=False, activity_layer=0):
 		
 		self.neuron_init(x)
 		max_mem=0.0
-		
+		nz_spikes = 0.0
+		tot_spikes = 0.0
+
 		for t in range(self.timesteps):
 			out_prev = self.input_layer(x)
 			
@@ -266,6 +268,10 @@ class VGG_SNN_STDB(nn.Module):
 					self.spike[l] 	= self.spike[l].masked_fill(out.bool(),t-1)
 					self.mem[l] 	= self.leak*self.mem[l] + self.features[l](out_prev) - rst
 					out_prev  		= out.clone()
+					if find_activity and l == activity_layer:
+						nz_spikes += torch.nonzero(out).size(0)
+						tot_spikes += out.numel()
+						break
 
 				elif isinstance(self.features[l], nn.AvgPool2d):
 					out_prev 		= self.features[l](out_prev)
@@ -273,7 +279,7 @@ class VGG_SNN_STDB(nn.Module):
 				elif isinstance(self.features[l], nn.Dropout):
 					out_prev 		= out_prev * self.mask[l]
 			
-			if find_max_mem and max_mem_layer<len(self.features):
+			if (find_max_mem and max_mem_layer<len(self.features)) or (find_activity and activity_layer < len(self.features)):
 				continue
 
 			out_prev       	= out_prev.reshape(self.batch_size, -1)
@@ -294,15 +300,21 @@ class VGG_SNN_STDB(nn.Module):
 					self.spike[prev+l] 	= self.spike[prev+l].masked_fill(out.bool(),t-1)
 					self.mem[prev+l] 	= self.leak*self.mem[prev+l] + self.classifier[l](out_prev) - rst
 					out_prev  		= out.clone()
+					if find_activity and (prev + l) == activity_layer:
+						nz_spikes += torch.nonzero(out).size(0)
+						tot_spikes += out.numel()
+						break
 
 				elif isinstance(self.classifier[l], nn.Dropout):
 					out_prev 		= out_prev * self.mask[prev+l]
 			
 			# Compute the classification layer outputs
-			if not find_max_mem:
+			if find_max_mem == False and find_activity == False:
 				self.mem[prev+l+1] 		= self.mem[prev+l+1] + self.classifier[l+1](out_prev)
 		if find_max_mem:
 			return max_mem
+		if find_activity:
+			return tot_spikes, nz_spikes
 
 		return self.mem[prev+l+1]
 
