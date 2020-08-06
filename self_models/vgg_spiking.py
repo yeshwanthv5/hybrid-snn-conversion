@@ -93,6 +93,7 @@ class VGG_SNN_STDB(nn.Module):
 		self.dataset 		= dataset
 		self.input_layer 	= PoissonGenerator()
 		self.threshold 		= {}
+		self.activity 		= {}
 		self.mem 			= {}
 		self.mask 			= {}
 		self.spike 			= {}
@@ -142,6 +143,21 @@ class VGG_SNN_STDB(nn.Module):
 				if thresholds:
 					self.threshold[prev+pos] = torch.tensor(thresholds.pop(0)*self.scaling_factor)
 				
+	def activity_update(self, activity=[]):
+
+		# Initialize estimated spiking activity for each layer
+
+		for pos in range(len(self.features)):
+			if isinstance(self.features[pos], nn.Conv2d):
+				if activity:
+					self.activity[pos] = torch.tensor(activity.pop(0))
+
+		prev = len(self.features)
+
+		for pos in range(len(self.classifier)-1):
+			if isinstance(self.classifier[pos], nn.Linear):
+				if activity:
+					self.activity[prev+pos] = torch.tensor(activity.pop(0))
 
 	def _make_layers(self, cfg):
 		layers 		= []
