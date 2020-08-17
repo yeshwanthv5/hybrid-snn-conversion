@@ -265,6 +265,7 @@ class VGG_SNN_STDB(nn.Module):
 		max_mem=0.0
 		nz_spikes = 0.0
 		tot_spikes = 0.0
+		activity_mask = None
 
 		for t in range(self.timesteps):
 			out_prev = self.input_layer(x)
@@ -287,6 +288,10 @@ class VGG_SNN_STDB(nn.Module):
 					if find_activity and l == activity_layer:
 						nz_spikes += torch.nonzero(out).size(0)
 						tot_spikes += out.numel()
+						if activity_mask is None:
+							activity_mask = out
+						else:
+							activity_mask += out
 						break
 
 				elif isinstance(self.features[l], nn.AvgPool2d):
@@ -319,6 +324,10 @@ class VGG_SNN_STDB(nn.Module):
 					if find_activity and (prev + l) == activity_layer:
 						nz_spikes += torch.nonzero(out).size(0)
 						tot_spikes += out.numel()
+						if activity_mask is None:
+							activity_mask = out
+						else:
+							activity_mask += out
 						break
 
 				elif isinstance(self.classifier[l], nn.Dropout):
@@ -330,7 +339,7 @@ class VGG_SNN_STDB(nn.Module):
 		if find_max_mem:
 			return max_mem
 		if find_activity:
-			return tot_spikes, nz_spikes
+			return tot_spikes, nz_spikes, activity_mask
 
 		return self.mem[prev+l+1]
 
