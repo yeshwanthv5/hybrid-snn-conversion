@@ -28,7 +28,7 @@ class VGG(nn.Module):
         self.features       = self._make_layers(cfg[vgg_name])
         if vgg_name == 'VGG5' and dataset!= 'MNIST':
             self.classifier = nn.Sequential(
-                            nn.Linear(512*4*4, 4096, bias=False),
+                            nn.Linear(128*8*8, 4096, bias=False), # 128*8*8 is more consistent with the input dimensions. 512*4*4 is misleading
                             nn.ReLU(inplace=True),
                             nn.Dropout(0.5),
                             nn.Linear(4096, 4096, bias=False),
@@ -108,7 +108,7 @@ class VGG(nn.Module):
                 layers += [nn.Conv2d(in_channels, x, kernel_size=self.kernel_size, padding=(self.kernel_size-1)//2, stride=stride, bias=False),
                            nn.ReLU(inplace=True)
                            ]
-                layers += [nn.Dropout(self.dropout)]           
+                layers += [nn.Dropout(self.dropout)]
                 in_channels = x
 
         
@@ -116,8 +116,8 @@ class VGG(nn.Module):
 
 def test():
     for a in cfg.keys():
-        if a=='VGG5':
-            continue
+        #if a=='VGG5':
+        #    continue
         net = VGG(a)
         x = torch.randn(2,3,32,32)
         y = net(x)

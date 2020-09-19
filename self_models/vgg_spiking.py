@@ -339,7 +339,7 @@ class VGG_SNN_STDB(nn.Module):
 		if find_max_mem:
 			return max_mem
 		if find_activity:
-			return tot_spikes, nz_spikes, activity_mask
+			return tot_spikes, nz_spikes
 
 		return self.mem[prev+l+1]
 
